@@ -1,113 +1,123 @@
 # Multi-Source Candidate Data Transformer
 
-A full-stack, single-monorepo application for ingesting candidate profiles from multiple structured and unstructured sources, deduplicating them into a single canonical record with complete provenance and confidence scoring, and projecting them into custom output shapes using a runtime configuration.
-
-## Features
-- **Deterministic Pipeline**: Pure functions process data from detection through extraction, normalization, merging, confidence calculation, and projection.
-- **Deduplication Engine**: Matches candidates based on normalized emails, E.164 phones, or fuzzy name similarity combined with secondary signals.
-- **Traceability**: All output fields record the original source and resolution method in a `provenance` log.
-- **Dynamic Projection**: Supports runtime configuration schemas using JSON shapes to filter, rename, or normalize output keys.
+A modern, high-performance, single-monorepo full-stack application designed to ingest candidate profiles from multiple structured and unstructured sources (CSV, JSON, PDF, DOCX, TXT), deduplicate them into a single canonical record with complete field-level provenance, and project them into custom output shapes using a runtime configuration JSON schema.
 
 ---
 
-## Tech Stack
-- **Backend**: Node.js + Express (JavaScript, ES Modules)
-- **Frontend**: React + Vite (JavaScript, HSL dark mode, Glassmorphic UI)
-- **Database**: MongoDB via Mongoose
-- **Parser Tools**: Papaparse (CSV), PDF-Parse (PDF), Mammoth (DOCX), Libphonenumber-js (Phone), Day.js (Date), Fuse.js (Fuzzy Matching)
-- **Validation**: Zod (Canonical profiles and dynamic custom projections)
-- **Testing**: Vitest
+## 📸 Dashboard Preview
+
+![Candidate Data Transformer Dashboard](docs/screenshot.png)
 
 ---
 
-## Scaffolding & Setup
+## 🔄 Pipeline Workflow & Architecture
+
+The deduplication engine operates as a pure deterministic pipeline. Each step executes in sequence, ensuring complete predictability and traceability from raw file ingestion to custom schema projection:
+
+```mermaid
+graph TD
+    A[Raw Sources: CSV, JSON, PDF, DOCX, TXT, GitHub, LinkedIn] -->|Ingest & Parse| B[1. Detection Stage]
+    B -->|Identify File and Schema Formats| C[2. Extraction Stage]
+    C -->|Extract Raw Fields & Text Content| D[3. Normalization Stage]
+    D -->|Standardize Emails, Phones, and Dates| E[4. Deduplication & Merge Stage]
+    E -->|Fuzzy Matches Names & Shared Contacts| F[5. Canonical Resolution Stage]
+    F -->|Calculate Confidence & Map Provenance| G[6. Runtime Output Projection]
+    G -->|Filter, Rename, & Map Output Keys| H[Final Projected Output JSON]
+
+    style A fill:#1e293b,stroke:#475569,stroke-width:2px,color:#fff
+    style H fill:#1e1b4b,stroke:#4f46e5,stroke-width:2px,color:#fff
+    style F fill:#06202a,stroke:#0891b2,stroke-width:2px,color:#fff
+```
+
+### Technical Detail Breakdown:
+1. **Detection Stage**: Identifies source document types and schemas (e.g. ATS layout vs. Recruiter CSV spreadsheet format) based on file headers, extensions, and content patterns.
+2. **Extraction Stage**: Parses files (utilizing `pdf-parse` for PDFs, `mammoth` for Word documents, and `papaparse` for CSVs) to fetch raw properties.
+3. **Normalization Stage**: Standardizes contact identifiers (Day.js for dates, E.164 phone formats using `libphonenumber-js`, and lowercase emails).
+4. **Deduplication & Merge Stage**: Identifies candidate identity overlaps using fuzzy name matching (`fuse.js`) combined with shared normalized email/phone contacts.
+5. **Canonical Resolution Stage**: Resolves field discrepancies according to a strict source-priority hierarchy, registers confidence percentages, and saves a field-level **Provenance Map** (merging history).
+6. **Runtime Output Projection**: Applies a Zod-validated JSON schema to map, rename, or omit properties on the fly.
+
+---
+
+## 💻 Frontend UI/UX Design
+
+The frontend is a single-page React client built on Vite, adhering to a sleek dark-glass design language:
+- **Responsiveness**: Fits viewports from mobile (320px+) up to large desktops (1920px+). Side-by-side dashboard shifts into a single-column layout on smaller viewports.
+- **Micro-interactions**: Subtle bouncing icons on uploader drag-and-drop actions, glowing borders on card selections, and smooth expand/collapse animations for raw JSON and merging logs.
+- **Standby Visualizer**: Features a CSS-animated rendering of document files streaming into a central deduplicator core while in standby.
+- **Skeleton Loading Panels**: Pulsating shimmers that outline incoming candidate card structures during server extraction, providing a highly visual progress indicator.
+
+---
+
+## 🛠️ Monorepo Structure
+
+```bash
+├── client/           # React + Vite frontend application
+│   ├── src/
+│   │   ├── App.jsx   # Main React component (fully responsive)
+│   │   ├── index.css # HSL design tokens, glows, timelines, and skeletons
+│   │   └── main.jsx  # Client bootstrap
+│   └── package.json
+├── server/           # Express backend server (REST API)
+│   ├── src/
+│   │   ├── server.js # API Router, health checks, and database configuration
+│   │   ├── pipeline/ # Deduplication pipeline core modules
+│   │   └── db/       # MongoDB schemas and models (OutputConfig, PipelineRun)
+│   └── package.json
+└── package.json      # Monorepo scripts (Dev concurrency, installations)
+```
+
+---
+
+## 🚀 Setup & Run Instructions
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
-- [MongoDB](https://www.mongodb.com/) (running locally on port 27017, or a custom URI)
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [MongoDB](https://www.mongodb.com/) (running locally on port 27017, or a custom URI via `.env`)
 
-### Installation
-1. Install all dependencies for both client and server from the monorepo root:
-   ```bash
-   npm run install:all
-   ```
-   *(This runs `npm install` inside both `/server` and `/client` directories automatically).*
+### 1. Installation
+Install server and client dependencies with a single command from the monorepo root:
+```bash
+npm run install:all
+```
 
-2. Alternatively, install them manually:
-   ```bash
-   # Server
-   cd server && npm install
-   # Client
-   cd ../client && npm install
-   ```
+### 2. Configure Environment (Server)
+From the server directory, copy the template `.env`:
+```bash
+cd server
+cp .env.example .env
+```
 
-3. Set up the backend environment:
-   ```bash
-   # From the server directory, copy the example env:
-   cp .env.example .env
-   ```
-
----
-
-## Run Instructions
-
-### Starting Server and Client Simultaneously (Recommended)
-You can run both the Express backend and React frontend with a single command from the monorepo root:
+### 3. Launch Development Mode
+Run both the backend Express router and the React Vite client concurrently from the root directory:
 ```bash
 npm run dev
 ```
-This launches:
-- Backend: [http://localhost:5000](http://localhost:5000)
-- Frontend: [http://localhost:3000](http://localhost:3000) (with `/api` routing proxy enabled)
-
-### Starting Server and Client Separately (Alternative)
-If you prefer separate terminal logs:
-1. Start the Express backend:
-   ```bash
-   cd server
-   npm start
-   ```
-2. Start the React frontend development server:
-   ```bash
-   cd client
-   npm run dev
-   ```
+- **Frontend Dashboard**: [http://localhost:3000](http://localhost:3000) (proxied requests go to port 5000)
+- **Backend API**: [http://localhost:5000](http://localhost:5000)
 
 ---
 
-## CLI Surface
-A command-line script is provided to run the transformer over local files.
+## 🛠️ CLI Surface
 
+Run the deduplication pipeline directly on local directories or files via the CLI:
 ```bash
-# From the server directory:
-# Run on sample files using the default config:
+# Run on sample files using default configurations
 npm run cli -- run --sources ../samples/recruiter_sample.csv,../samples/ats_sample.json --out ./output.json
 
-# Run on sample files with a custom projection config:
+# Run on sample files with a custom projection config
 npm run cli -- run --sources ../samples/recruiter_sample.csv,../samples/ats_sample.json --config ../config.example.json --out ./output_projected.json
 
-# Run on sample files and skip database writes (fast local testing):
+# Run without database writes (offline mode)
 npm run cli -- run --sources ../samples --out ./output.json --no-persist
 ```
 
 ---
 
-## Running Automated Tests
-Tests are located in `server/tests/` and run using Vitest.
+## 🧪 Testing
 
+Execute automated unit and integration tests using Vitest:
 ```bash
 cd server
 npm run test
 ```
-
----
-
-## Assumptions
-
-The following design choices and constraints were adopted:
-1. **LinkedIn Integration**: Public access to LinkedIn profile data is restricted. When a LinkedIn URL is submitted, the extractor checks for a matching JSON file under the `server/tests/fixtures/` or `samples/` directory. If no fixture matches and a name cannot be derived from the URL slug, the extractor degrades gracefully, returning empty fields with `raw_confidence: 0` (it never invents mock data). When a name can be derived from the URL slug (e.g. `https://linkedin.com/in/bhavana-siva-sri`), it extracts the name as a low-confidence guess (`raw_confidence: 0.3`) with all other fields blank.
-2. **Skill Canonicalization**: Standardizing skills utilizes a hand-curated list of ~30 popular developer skills. Fuzzy matching is performed with `fuse.js`. Any unknown skill found on a resume is preserved as-is but assigned a lower default confidence score (`0.4`) to indicate it did not verify against the standard taxonomy.
-3. **Source Priority Order**: When scalar fields disagree (e.g. different names on different resumes), conflict resolution prefers the source with the highest raw confidence. In the event of a tie, the system falls back to this source order:
-   `ats_json > recruiter_csv > linkedin_json > github_api > resume > recruiter_notes`
-4. **Recruiter Notes Confidence**: Text notes (.txt) are treated as freeform, unstructured, and highly subjective. Thus, they are given a low default raw confidence score of `0.3`.
-5. **MongoDB / Database Liveness**: The pipeline itself remains database-agnostic. It runs in-memory as pure functions so it can run offline or in `--no-persist` mode without a running MongoDB connection. If a local MongoDB instance is not installed or running, you can connect to a free MongoDB Atlas cluster by setting the `MONGODB_URI` environment variable in `server/.env` to your Atlas connection string.
