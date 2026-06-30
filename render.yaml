@@ -8,9 +8,9 @@ services:
     startCommand: cd server && node src/server.js
     envVars:
       - key: PORT
-        value: 5000
+        value: "5000"
       - key: MONGODB_URI
-        placeholder: "Insert your MongoDB Atlas Connection String (e.g. mongodb+srv://...)"
+        sync: false
       - key: NODE_ENV
         value: production
 
