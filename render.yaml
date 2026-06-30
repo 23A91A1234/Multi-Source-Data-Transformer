@@ -1,0 +1,32 @@
+services:
+  # 1. Express Backend API Service
+  - type: web
+    name: candidate-data-transformer-api
+    env: node
+    plan: free
+    buildCommand: npm install && cd server && npm install
+    startCommand: cd server && node src/server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        placeholder: "Insert your MongoDB Atlas Connection String (e.g. mongodb+srv://...)"
+      - key: NODE_ENV
+        value: production
+
+  # 2. React Frontend Static Site
+  - type: web
+    name: candidate-data-transformer-web
+    env: static
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    publishPath: client/dist
+    routes:
+      # Rewrite /api/* to the Backend Express API Service URL
+      - type: rewrite
+        source: /api/*
+        destination: https://candidate-data-transformer-api.onrender.com/api/*
+      # Support client-side routing (SPA fallback)
+      - type: rewrite
+        source: /*
+        destination: /index.html
