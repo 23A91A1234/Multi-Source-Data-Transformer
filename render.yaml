@@ -15,12 +15,10 @@ services:
         value: production
 
   # 2. React Frontend Static Site
-  - type: web
+  - type: static
     name: candidate-data-transformer-web
-    env: static
-    plan: free
     buildCommand: cd client && npm install && npm run build
-    publishPath: client/dist
+    staticPublishPath: client/dist
     routes:
       # Rewrite /api/* to the Backend Express API Service URL
       - type: rewrite
